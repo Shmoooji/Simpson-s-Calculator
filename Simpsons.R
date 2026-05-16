@@ -4,6 +4,8 @@ library(bsicons)
 library(plotly)
 library(reactable)
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+
 parse_function <- function(expr_text) {
   expr <- parse(text = expr_text)
   function(x) eval(expr, envir = list(x = x))
@@ -25,46 +27,143 @@ simpsons_one_third <- function(f, a, b, n) {
   )
 }
 
-app_theme <- bs_theme(
-  version       = 5,
-  primary       = "#4F46E5",
-  secondary     = "#64748B",
-  success       = "#10B981",
-  base_font     = font_google("Inter"),
-  heading_font  = font_google("Inter"),
-  code_font     = font_google("JetBrains Mono"),
-  bg            = "#FFFFFF",
-  fg            = "#0F172A"
+# ── shared CSS (mode-independent) ────────────────────────────────────────────
+
+shared_css <- "
+  .math-block { text-align:center; font-size:1.05rem; margin:.75rem 0; }
+  .value-box .value-box-title { font-weight:600; letter-spacing:.02em; }
+  .value-box .value-box-value { font-size:1.6rem; word-break:break-all; }
+  .syntax-table td, .syntax-table th { padding:.4rem .9rem; }
+  .navbar { display:none !important; }
+  
+  /* dark-mode toggle bar sits above all content */
+  #mode-bar {
+    position: sticky; top: 0; z-index: 1030;
+    display: flex; justify-content: flex-end; align-items: center;
+    padding: 8px 18px;
+    border-bottom: 1px solid rgba(128,128,128,.15);
+  }
+  
+  /* Custom Sun/Moon Button */
+  .mode-toggle-btn {
+    border-radius: 8px; padding: 6px 14px; font-size: 1.25rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease-in-out; border: none; outline: none;
+  }
+  
+  /* callout boxes */
+  .callout {
+    border-left: 4px solid; border-radius: 0 8px 8px 0;
+    padding: .85rem 1.1rem; margin: 1rem 0;
+  }
+  /* takeaway rows in conclusion */
+  .takeaway-row {
+    display: flex; gap: .85rem; align-items: flex-start;
+    padding: .7rem 0; border-bottom: 1px solid rgba(128,128,128,.12);
+  }
+  .takeaway-row:last-child { border-bottom: none; }
+"
+
+# ── light theme ───────────────────────────────────────────────────────────────
+
+light_theme <- bs_theme(
+  version      = 5,
+  primary      = "#4F46E5",
+  secondary    = "#64748B",
+  success      = "#10B981",
+  danger       = "#EF4444",
+  warning      = "#F59E0B",
+  base_font    = font_google("Inter"),
+  heading_font = font_google("Inter"),
+  code_font    = font_google("JetBrains Mono"),
+  bg           = "#FFFFFF",
+  fg           = "#0F172A"
 ) |>
-  bs_add_rules("
-    .math-block { text-align:center; font-size:1.05rem; margin: .75rem 0; }
+  bs_add_rules(paste0(shared_css, "
     .accordion-button:not(.collapsed) { background:#EEF2FF; color:#3730A3; }
-    .value-box .value-box-title { font-weight:600; letter-spacing:.02em; }
-    .value-box .value-box-value { font-size: 1.6rem; word-break: break-all; }
-    .syntax-table td, .syntax-table th { padding:.4rem .9rem; }
-    .navbar { display: none !important; }
-  ")
+    #mode-bar { background:#F8FAFC; }
+    
+    /* Light mode button style (Moon) */
+    .mode-toggle-btn { background: #F1F5F9; color: #0F172A; }
+    .mode-toggle-btn:hover { background: #E2E8F0; }
+    
+    .callout.info    { background:#EEF2FF; border-color:#4F46E5; color:#1e1b52; }
+    .callout.success { background:#ECFDF5; border-color:#10B981; color:#065f46; }
+    .callout.warning { background:#FFFBEB; border-color:#F59E0B; color:#78350f; }
+    .callout.danger  { background:#FEF2F2; border-color:#EF4444; color:#7f1d1d; }
+    .hero-banner     { background: linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 100%);
+                       border: 1px solid #C7D2FE; }
+  "))
+
+# ── dark theme ────────────────────────────────────────────────────────────────
+
+dark_theme <- bs_theme(
+  version      = 5,
+  primary      = "#818CF8",
+  secondary    = "#94A3B8",
+  success      = "#34D399",
+  danger       = "#F87171",
+  warning      = "#FCD34D",
+  base_font    = font_google("Inter"),
+  heading_font = font_google("Inter"),
+  code_font    = font_google("JetBrains Mono"),
+  bg           = "#111111",
+  fg           = "#E2E8F0"
+) |>
+  bs_add_rules(paste0(shared_css, "
+    .accordion-button:not(.collapsed) { background:#1a1a2e; color:#A5B4FC; }
+    #mode-bar { background:#0D0D0D; }
+    
+    /* Dark mode button style (Green Sun) */
+    .mode-toggle-btn { background: #1E293B; color: #34D399; }
+    .mode-toggle-btn:hover { background: #334155; }
+    
+    .callout.info    { background:#1a1a2e; border-color:#818CF8; color:#c7d2fe; }
+    .callout.success { background:#022c22; border-color:#34D399; color:#6ee7b7; }
+    .callout.warning { background:#1c1502; border-color:#FCD34D; color:#fde68a; }
+    .callout.danger  { background:#1f0808; border-color:#F87171; color:#fca5a5; }
+    .hero-banner     { background: linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+                       border: 1px solid #2d2d5e; }
+  "))
+
+# ── Introduction panel ────────────────────────────────────────────────────────
 
 intro_panel <- nav_panel(
   title = "Introduction",
   value = "Introduction",
 
-  div(class = "container py-4", style = "max-width: 940px;",
+  div(class = "container py-4", style = "max-width:940px;",
 
-    div(class = "p-4 mb-4 rounded-3 d-flex flex-column flex-md-row
+    # LANDING HERO
+    div(class = "text-center py-5 mb-2",
+      h1(class = "display-5 fw-bold mb-3",
+        "Simpson's 1/3 Rule"),
+      p(class  = "lead text-muted mx-auto mb-0",
+        style  = "max-width:600px;",
+        HTML("A numerical integration method that approximates definite integrals
+              by fitting <strong>parabolic arcs</strong> through sample points —
+              achieving fourth-order accuracy with minimal computation."))
+    ),
+
+    # hero banner
+    div(class = "hero-banner p-4 mb-4 rounded-3 d-flex flex-column flex-md-row
                  align-items-md-center justify-content-between gap-3",
-        style = "background: linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 100%);
-                 border: 1px solid #C7D2FE;",
       div(
         h4(class = "fw-semibold mb-1", "Ready to integrate?"),
         p(class = "mb-0 text-muted",
-          "Skip ahead and try the calculator now, or read on for the theory.")
+          "Skip ahead and try the calculator, or read on for the theory.")
       ),
-      actionButton("go_calc",
-        label = tagList(bs_icon("calculator-fill"), " Open Calculator"),
-        class = "btn btn-primary btn-lg px-4")
+      div(class = "d-flex gap-2",
+        actionButton("go_calc",
+          label = tagList(bs_icon("calculator-fill"), " Open Calculator"),
+          class = "btn btn-primary btn-lg px-4"),
+        actionButton("go_conclusion_intro",
+          label = tagList(bs_icon("flag-fill"), " Conclusion"),
+          class = "btn btn-outline-secondary btn-lg px-3")
+      )
     ),
 
+    # What is it?
     card(
       card_header(class = "fs-4 fw-semibold", "What is Simpson's 1/3 Rule?"),
       card_body(
@@ -79,31 +178,80 @@ intro_panel <- nav_panel(
             + \\dots + 4f(x_{n-1}) + f(x_n)\\Big]$$")),
         p("Where:"),
         withMathJax(tags$ul(
-          tags$li("\\(h = \\dfrac{b-a}{n}\\) is the step size"),
+          tags$li("\\(h = \\dfrac{b-a}{n}\\) — step size (width of each subinterval)"),
           tags$li("\\(x_i = a + i \\cdot h\\) for \\(i = 0, 1, \\dots, n\\)"),
-          tags$li("\\(n\\) is the number of subintervals (must be even)"),
-          tags$li("Weights follow the pattern 1, 4, 2, 4, 2, ..., 4, 1")
+          tags$li("\\(n\\) — number of subintervals; must be a positive even integer"),
+          tags$li("Weights follow the pattern \\(1,\\,4,\\,2,\\,4,\\,2,\\,\\dots,\\,4,\\,1\\)")
         ))
       )
     ),
 
+    # ── Why parabolas? ── CONCEPTUAL card (geometry / intuition only) ─────────
     card(class = "mt-3",
-      card_header(class = "fs-5 fw-semibold", "Why parabolas?"),
+      card_header(class = "fs-5 fw-semibold",
+        tagList(bs_icon("bezier2"), " Why Parabolas?")),
       card_body(
-        p("The trapezoidal rule joins consecutive points with straight lines,
-           which underestimates curvature. Simpson's 1/3 rule fits a quadratic
-           polynomial through every three consecutive points, capturing the
-           curvature of \\(f(x)\\) more faithfully and yielding a much smaller
-           error for smooth functions:"),
-        withMathJax(p(class = "math-block",
-          "$$E = -\\frac{(b-a)}{180}\\, h^{4}\\, f^{(4)}(\\xi),
-              \\quad \\xi \\in [a,b]$$")),
-        p(class = "text-muted small",
-          "The fourth-power dependence on h makes Simpson's rule converge
-           rapidly: halving h cuts the error by roughly a factor of 16.")
+        p(HTML("Every numerical integration rule replaces the curve with a simpler
+               shape over small intervals and sums the resulting areas:")),
+        tags$ul(
+          tags$li(HTML("<strong>Rectangles</strong> — constant height per strip;
+                        crude for any curved function.")),
+          tags$li(HTML("<strong>Trapezoids</strong> (Trapezoidal Rule) — straight-line
+                        segments between consecutive points; better, but the linear
+                        approximation still <em>misses</em> the curvature of
+                        \\(f(x)\\).")),
+          tags$li(HTML("<strong>Parabolas</strong> (Simpson's 1/3 Rule) — a
+                        quadratic polynomial is uniquely determined by any
+                        <em>three</em> points. The rule groups sample points into
+                        overlapping triples
+                        \\((x_{2k},\\,x_{2k+1},\\,x_{2k+2})\\), fits one parabola
+                        per triple, and sums the exact area under each parabola.
+                        This matches the curvature of \\(f(x)\\) far more
+                        faithfully."))
+        ),
+        div(class = "callout info",
+          HTML("<strong>Why must n be even?</strong> Each parabolic strip spans
+                <em>two</em> sub-intervals (three points). For the strips to tile
+                \\([a,b]\\) perfectly without gaps or overlaps, the total number
+                of sub-intervals must be even. If you enter an odd \\(n\\), this
+                calculator bumps it up by 1 automatically.")),
+        withMathJax()
       )
     ),
 
+    # ── Error Analysis ── SEPARATE card (formula / convergence) ──────────────
+    card(class = "mt-3",
+      card_header(class = "fs-5 fw-semibold",
+        tagList(bs_icon("graph-down-arrow"), " Error Analysis")),
+      card_body(
+        p(HTML("Because we fit <strong>degree-2</strong> polynomials, the errors
+               from the constant, linear, and quadratic terms all cancel exactly.
+               The first surviving error term involves the
+               <strong>fourth derivative</strong> of \\(f\\):")),
+        withMathJax(p(class = "math-block",
+          "$$E = -\\frac{(b-a)}{180}\\, h^{4}\\, f^{(4)}(\\xi),
+              \\quad \\xi \\in [a,b]$$")),
+        tags$ul(
+          tags$li(withMathJax(HTML("\\(h = (b-a)/n\\) — the step size"))),
+          tags$li(withMathJax(HTML("\\(f^{(4)}(\\xi)\\) — the fourth derivative
+                                    evaluated at some (unknown) point inside
+                                    \\([a,b]\\)"))),
+          tags$li(withMathJax(HTML("Error \\(\\propto h^4\\): <strong>doubling
+                                    \\(n\\) (halving \\(h\\)) shrinks the error
+                                    by a factor of \\(2^4 = 16\\)</strong>")))
+        ),
+        div(class = "callout warning",
+          HTML("<strong>When does it struggle?</strong> Simpson's Rule is
+                <em>exact</em> for any polynomial of degree ≤ 3 (the \\(h^4\\)
+                term vanishes). It performs poorly when \\(f^{(4)}\\) is large
+                — sharply oscillating functions, kinks, or singularities inside
+                \\([a,b]\\). In those cases, increase \\(n\\) significantly or
+                use adaptive integration (e.g. R's own
+                <code>integrate()</code>)."))
+      )
+    ),
+
+    # Applications
     card(class = "mt-3",
       card_header(class = "fs-5 fw-semibold", "Applications"),
       card_body(
@@ -112,8 +260,8 @@ intro_panel <- nav_panel(
             "Computing work, fluid-flow rates, and centroids of irregular
              cross-sections.")),
           card(card_body(h6(class = "fw-semibold", "Physics"),
-            "Evaluating integrals appearing in mechanics, thermodynamics,
-             and electromagnetism.")),
+            "Evaluating integrals in mechanics, thermodynamics, and
+             electromagnetism.")),
           card(card_body(h6(class = "fw-semibold", "Statistics"),
             "Approximating tail probabilities under non-elementary density
              curves (e.g. the normal CDF).")),
@@ -124,29 +272,44 @@ intro_panel <- nav_panel(
       )
     ),
 
+    # Function syntax
     card(class = "mt-3",
-      card_header(class = "fs-5 fw-semibold", "Function syntax (R)"),
+      card_header(class = "fs-5 fw-semibold", "Function Syntax (R)"),
       card_body(
-        p("Type your function in valid R syntax. A few common rewrites:"),
+        p("Type your function in valid R syntax. Common rewrites:"),
         tags$div(class = "table-responsive",
           tags$table(class = "table table-sm syntax-table",
             tags$thead(tags$tr(tags$th("Mathematics"), tags$th("R syntax"))),
             tags$tbody(
-              tags$tr(tags$td("\\(2x\\)"),            tags$td(tags$code("2 * x"))),
-              tags$tr(tags$td("\\(x^{2}\\)"),         tags$td(tags$code("x^2"))),
-              tags$tr(tags$td("\\(\\sin(x)\\)"),      tags$td(tags$code("sin(x)"))),
-              tags$tr(tags$td("\\(e^{x}\\)"),         tags$td(tags$code("exp(x)"))),
-              tags$tr(tags$td("\\(\\ln(x)\\)"),       tags$td(tags$code("log(x)"))),
-              tags$tr(tags$td("\\(\\log_{10}(x)\\)"), tags$td(tags$code("log10(x)"))),
-              tags$tr(tags$td("\\(|x|\\)"),           tags$td(tags$code("abs(x)"))),
-              tags$tr(tags$td("\\(\\sqrt{x}\\)"),     tags$td(tags$code("sqrt(x)")))
+              tags$tr(tags$td(withMathJax("\\(2x\\)")),           tags$td(tags$code("2 * x"))),
+              tags$tr(tags$td(withMathJax("\\(x^{2}\\)")),         tags$td(tags$code("x^2"))),
+              tags$tr(tags$td(withMathJax("\\(\\sin(x)\\)")),      tags$td(tags$code("sin(x)"))),
+              tags$tr(tags$td(withMathJax("\\(e^{x}\\)")),         tags$td(tags$code("exp(x)"))),
+              tags$tr(tags$td(withMathJax("\\(\\ln(x)\\)")),       tags$td(tags$code("log(x)"))),
+              tags$tr(tags$td(withMathJax("\\(\\log_{10}(x)\\)")), tags$td(tags$code("log10(x)"))),
+              tags$tr(tags$td(withMathJax("\\(|x|\\)")),           tags$td(tags$code("abs(x)"))),
+              tags$tr(tags$td(withMathJax("\\(\\sqrt{x}\\)")),     tags$td(tags$code("sqrt(x)")))
             )
           )
-        )
+        ),
+        div(class = "callout danger",
+          HTML("<strong>Common mistakes:</strong><br>
+                • Write <code>2 * x</code>, not <code>2x</code> — R requires
+                  explicit multiplication.<br>
+                • Write <code>sin(x)^2</code>, not <code>sin^2(x)</code>.<br>
+                • Functions with singularities inside [a, b] (e.g.
+                  <code>1/x</code> over [−1, 1]) will produce an error."))
       )
+    ),
+
+    # Footer for Introduction Page
+    div(class = "text-center text-muted small mt-4 pt-2 pb-4",
+      p("Cabantoc · Florentino · Juma-ang · Orpilla · Rosillosa — MAT Final Project")
     )
-  )
+  ),
 )
+
+# ── Calculator panel ───────────────────────────────────────────────────────────
 
 calculator_panel <- nav_panel(
   title = "Calculator",
@@ -218,26 +381,243 @@ calculator_panel <- nav_panel(
   )
 )
 
+# ── Conclusion panel ───────────────────────────────────────────────────────────
+
+conclusion_panel <- nav_panel(
+  title = "Conclusion",
+  value = "Conclusion",
+
+  div(class = "container py-4", style = "max-width:940px;",
+
+    div(class = "d-flex gap-2 mb-4",
+      actionButton("go_home2",
+        label = tagList(bs_icon("arrow-left-circle"), " Back to Introduction"),
+        class = "btn btn-outline-secondary btn-sm"),
+      actionButton("go_calc2",
+        label = tagList(bs_icon("calculator-fill"), " Open Calculator"),
+        class = "btn btn-outline-primary btn-sm")
+    ),
+
+    # Summary
+    card(
+      card_header(class = "fs-4 fw-semibold",
+        tagList(bs_icon("flag-fill"), " Summary")),
+      card_body(
+        p(class = "lead",
+          HTML("Simpson's 1/3 Rule is one of the most <strong>elegant and
+               widely used</strong> methods in numerical integration. By fitting
+               parabolic arcs through every three consecutive sample points,
+               it achieves <strong>fourth-order accuracy</strong> — far superior
+               to the Trapezoidal Rule — while remaining computationally
+               straightforward to implement.")),
+        withMathJax(p(class = "math-block",
+          "$$\\int_{a}^{b} f(x)\\,dx \\approx
+            \\frac{h}{3}\\Big[f(x_0) + 4f(x_1) + 2f(x_2)
+            + \\cdots + 4f(x_{n-1}) + f(x_n)\\Big]$$"))
+      )
+    ),
+
+    # Key Takeaways
+    card(class = "mt-3",
+      card_header(class = "fs-5 fw-semibold",
+        tagList(bs_icon("lightbulb-fill"), " Key Takeaways")),
+      card_body(
+
+        div(class = "takeaway-row",
+          tags$span(class = "badge rounded-pill bg-primary fs-6 flex-shrink-0", "1"),
+          div(
+            tags$strong("Parabolas capture curvature that straight lines miss."),
+            p(class = "mb-0 text-muted small",
+              "The Trapezoidal Rule connects points with straight lines, systematically
+               under- or over-estimating curved integrands. Fitting a quadratic through
+               every triple of points matches the curvature of f(x) far more faithfully,
+               often with far fewer sample points needed.")
+          )
+        ),
+
+        div(class = "takeaway-row",
+          tags$span(class = "badge rounded-pill bg-primary fs-6 flex-shrink-0", "2"),
+          div(
+            tags$strong("Fourth-order convergence is rapid."),
+            withMathJax(p(class = "mb-0 text-muted small",
+              "The error scales as \\(h^4\\). Doubling \\(n\\) — which halves
+               \\(h\\) — reduces the error by \\(2^4 = 16\\times\\). In practice,
+               even a modest \\(n\\) (e.g. 10–20) yields excellent accuracy for
+               smooth, well-behaved functions."))
+          )
+        ),
+
+        div(class = "takeaway-row",
+          tags$span(class = "badge rounded-pill bg-primary fs-6 flex-shrink-0", "3"),
+          div(
+            tags$strong("It is exact for polynomials of degree 3 or lower."),
+            p(class = "mb-0 text-muted small",
+              "Even though we fit parabolas (degree 2), the rule integrates cubic
+               polynomials exactly — the error term's fourth-derivative factor
+               vanishes for cubics. This is a pleasant bonus that makes the method
+               stronger than its degree-2 fitting suggests.")
+          )
+        ),
+
+        div(class = "takeaway-row",
+          tags$span(class = "badge rounded-pill bg-primary fs-6 flex-shrink-0", "4"),
+          div(
+            tags$strong("n must always be even."),
+            p(class = "mb-0 text-muted small",
+              "Each parabolic strip spans two sub-intervals (three points). The
+               strips must tile [a, b] perfectly, which requires an even number
+               of sub-intervals. This is a hard constraint, not a guideline —
+               the calculator enforces it automatically.")
+          )
+        ),
+
+        div(class = "takeaway-row",
+          tags$span(class = "badge rounded-pill bg-warning fs-6 flex-shrink-0",
+                    style = "color:#1c1c1c;", "!"),
+          div(
+            tags$strong("Know the limitations."),
+            p(class = "mb-0 text-muted small",
+              "The rule struggles when f has a large fourth derivative inside
+               [a, b] — sharp oscillations, kinks, near-singularities. In those
+               cases, either increase n substantially or switch to an adaptive
+               integrator (such as R's built-in integrate()).")
+          )
+        )
+      )
+    ),
+
+    # Method comparison table
+    card(class = "mt-3",
+      card_header(class = "fs-5 fw-semibold",
+        tagList(bs_icon("bar-chart-line-fill"), " Method Comparison")),
+      card_body(
+        tags$div(class = "table-responsive",
+          tags$table(class = "table table-sm table-bordered syntax-table",
+            tags$thead(class = "table-light",
+              tags$tr(
+                tags$th("Method"),
+                tags$th("Shape fitted"),
+                tags$th("Error order"),
+                tags$th("n constraint")
+              )
+            ),
+            tags$tbody(
+              tags$tr(
+                tags$td("Midpoint Rule"),
+                tags$td("Rectangles"),
+                tags$td(withMathJax("\\(O(h^2)\\)")),
+                tags$td("Any")
+              ),
+              tags$tr(
+                tags$td("Trapezoidal Rule"),
+                tags$td("Trapezoids (linear)"),
+                tags$td(withMathJax("\\(O(h^2)\\)")),
+                tags$td("Any")
+              ),
+              tags$tr(class = "table-primary fw-semibold",
+                tags$td("Simpson's 1/3 Rule ★"),
+                tags$td("Parabolas (quadratic)"),
+                tags$td(withMathJax("\\(O(h^4)\\)")),
+                tags$td("Even")
+              ),
+              tags$tr(
+                tags$td("Simpson's 3/8 Rule"),
+                tags$td("Cubics"),
+                tags$td(withMathJax("\\(O(h^4)\\)")),
+                tags$td("Multiples of 3")
+              )
+            )
+          )
+        )
+      )
+    ),
+
+    # Reflection
+    card(class = "mt-3",
+      card_header(class = "fs-5 fw-semibold",
+        tagList(bs_icon("journal-text"), " Reflection")),
+      card_body(
+        p(HTML("Building this calculator deepened our understanding of how a
+               seemingly simple formula — a weighted sum of function values —
+               rests on a rich geometric and algebraic foundation. The connection
+               between the 1-4-2-4-1 coefficient pattern and the fitting of
+               parabolas is not obvious at first glance; it becomes clear only
+               once you see that integrating a quadratic exactly over two
+               sub-intervals gives precisely
+               \\(\\tfrac{h}{3}(f_0 + 4f_1 + f_2)\\).")),
+        p(HTML("We also found that <strong>numerical error is not abstract</strong>.
+               The calculator computes it concretely against R's own high-accuracy
+               integrator, making it easy to see how rapidly accuracy improves as
+               \\(n\\) increases — and to appreciate when the rule struggles.")),
+        div(class = "callout success",
+          HTML("<strong>Bottom line:</strong> Simpson's 1/3 Rule is a practical,
+                accurate, and widely applicable tool. When the integrand is smooth
+                and the interval is finite, it should be one of the first methods
+                you reach for — and now you know exactly why."))
+      )
+    ),
+
+    # Footer
+    div(class = "text-center text-muted small mt-4 pt-2 pb-4",
+      p("Cabantoc · Florentino · Juma-ang · Orpilla · Rosillosa — MAT Final Project")
+    )
+  )
+)
+
+# ── UI ─────────────────────────────────────────────────────────────────────────
+
 ui <- page_navbar(
   id       = "main_nav",
   title    = "Simpson's 1/3 Rule",
-  theme    = app_theme,
+  theme    = light_theme,
   selected = "Introduction",
-  header   = tags$head(withMathJax()),
+
+  # Mode bar: sits at the top of the content area on every page
+  header = tagList(
+    tags$head(withMathJax()),
+    div(id = "mode-bar",
+      actionButton("dark_toggle", label = bs_icon("moon"), class = "mode-toggle-btn")
+    )
+  ),
 
   intro_panel,
-  calculator_panel
+  calculator_panel,
+  conclusion_panel
 )
+
+# ── Server ─────────────────────────────────────────────────────────────────────
 
 server <- function(input, output, session) {
 
-  observeEvent(input$go_calc, {
-    nav_select(id = "main_nav", selected = "Calculator")
-  })
-  observeEvent(input$go_home, {
-    nav_select(id = "main_nav", selected = "Introduction")
-  })
+  # ── dark mode ────────────────────────────────────────────────────────────────
+  is_dark <- reactiveVal(FALSE)
 
+  observeEvent(input$dark_toggle, {
+    # Flip the boolean state
+    new_state <- !is_dark()
+    is_dark(new_state)
+    
+    # Apply the correct theme
+    session$setCurrentTheme(
+      if (new_state) dark_theme else light_theme
+    )
+    
+    # Swap the button icon automatically
+    updateActionButton(
+      session, 
+      "dark_toggle", 
+      label = if (new_state) bs_icon("sun") else bs_icon("moon")
+    )
+  }, ignoreInit = TRUE)
+
+  # ── navigation ───────────────────────────────────────────────────────────────
+  observeEvent(input$go_calc,            nav_select("main_nav", "Calculator"))
+  observeEvent(input$go_calc2,           nav_select("main_nav", "Calculator"))
+  observeEvent(input$go_home,            nav_select("main_nav", "Introduction"))
+  observeEvent(input$go_home2,           nav_select("main_nav", "Introduction"))
+  observeEvent(input$go_conclusion_intro,nav_select("main_nav", "Conclusion"))
+
+  # ── core reactive ─────────────────────────────────────────────────────────────
   results <- reactive({
     req(input$func, input$a, input$b, input$n)
 
@@ -292,10 +672,22 @@ server <- function(input, output, session) {
     if (is.na(err)) "-" else formatC(err, digits = 4, format = "g")
   })
 
+  # ── plot (reacts to dark mode) ────────────────────────────────────────────────
   output$integral_plot <- renderPlotly({
-    res <- results(); f <- res$f
-    a   <- input$a;   b <- input$b
-    pad <- (b - a) * 0.20
+    res  <- results()
+    f    <- res$f
+    a    <- input$a
+    b    <- input$b
+    dark <- is_dark()
+    pad  <- (b - a) * 0.20
+
+    # colour palette switches with theme
+    bg_col   <- if (dark) "#1E293B" else "#FFFFFF"
+    fg_col   <- if (dark) "#E2E8F0" else "#0F172A"
+    grid_col <- if (dark) "#334155" else "#E5E7EB"
+    line_col <- if (dark) "#A5B4FC" else "#0F172A"
+    dot_col  <- if (dark) "#F87171" else "#EF4444"
+    pt_col   <- if (dark) "#818CF8" else "#4F46E5"
 
     xs <- seq(a - pad, b + pad, length.out = 400)
     ys <- vapply(xs, f, numeric(1))
@@ -317,21 +709,21 @@ server <- function(input, output, session) {
       add_trace(
         x = xs, y = ys,
         type = "scatter", mode = "lines",
-        line = list(color = "#0F172A", width = 2.5),
+        line = list(color = line_col, width = 2.5),
         name = "f(x)"
       )
 
     for (k in seq(1, res$n, by = 2)) {
-      x012 <- res$x[k:(k + 2)]
-      y012 <- res$fx[k:(k + 2)]
-      A <- cbind(x012^2, x012, 1)
+      x012  <- res$x[k:(k + 2)]
+      y012  <- res$fx[k:(k + 2)]
+      A     <- cbind(x012^2, x012, 1)
       coefs <- tryCatch(solve(A, y012), error = function(e) NULL)
       if (!is.null(coefs)) {
         xx <- seq(x012[1], x012[3], length.out = 60)
         yy <- coefs[1] * xx^2 + coefs[2] * xx + coefs[3]
-        p <- p |> add_trace(
+        p  <- p |> add_trace(
           x = xx, y = yy, type = "scatter", mode = "lines",
-          line = list(color = "#EF4444", width = 1.8, dash = "dot"),
+          line = list(color = dot_col, width = 1.8, dash = "dot"),
           showlegend = (k == 1),
           name = "Parabolic fits",
           hoverinfo = "skip"
@@ -343,26 +735,31 @@ server <- function(input, output, session) {
       add_trace(
         x = res$x, y = res$fx,
         type = "scatter", mode = "markers",
-        marker = list(color = "#4F46E5", size = 9,
-                      line = list(color = "white", width = 1.5)),
+        marker = list(color = pt_col, size = 9,
+                      line = list(color = if (dark) "#0F172A" else "white",
+                                  width = 1.5)),
         name = "Sample points (x_i, f(x_i))"
       ) |>
       layout(
         title = list(
-          text = sprintf("∫ f(x) dx from %g to %g", a, b),
-          font = list(family = "Inter", size = 16, color = "#0F172A")
+          text = sprintf("\u222b f(x) dx from %g to %g", a, b),
+          font = list(family = "Inter", size = 16, color = fg_col)
         ),
-        xaxis = list(title = "x", zeroline = TRUE, gridcolor = "#E5E7EB"),
-        yaxis = list(title = "f(x)", zeroline = TRUE, gridcolor = "#E5E7EB"),
-        plot_bgcolor  = "#FFFFFF",
-        paper_bgcolor = "#FFFFFF",
+        xaxis = list(title = "x",    zeroline = TRUE,
+                     gridcolor = grid_col, color = fg_col),
+        yaxis = list(title = "f(x)", zeroline = TRUE,
+                     gridcolor = grid_col, color = fg_col),
+        plot_bgcolor  = bg_col,
+        paper_bgcolor = bg_col,
         hovermode = "x unified",
-        legend = list(orientation = "h", y = -0.18, x = 0),
+        legend = list(orientation = "h", y = -0.18, x = 0,
+                      font = list(color = fg_col)),
         margin = list(t = 60, l = 60, r = 30, b = 60)
       ) |>
       config(displaylogo = FALSE)
   })
 
+  # ── steps ─────────────────────────────────────────────────────────────────────
   output$steps_ui <- renderUI({
     res <- results()
     a   <- input$a; b <- input$b
@@ -376,8 +773,8 @@ server <- function(input, output, session) {
 
     step1 <- tagList(
       p(HTML(sprintf(
-        "Use \\(h = \\dfrac{b-a}{n}\\) with \\(a = %g\\), \\(b = %g\\), \\(n = %d\\):",
-        a, b, res$n))),
+        "Use \\(h = \\dfrac{b-a}{n}\\) with \\(a = %g\\), \\(b = %g\\),
+         \\(n = %d\\):", a, b, res$n))),
       p(class = "math-block",
         HTML(sprintf("$$h = \\dfrac{%g - (%g)}{%d} = %.6g$$",
                      b, a, res$n, res$h)))
@@ -386,9 +783,7 @@ server <- function(input, output, session) {
     step2 <- tagList(
       p("Compute each \\(x_i = a + i \\cdot h\\):"),
       p(class = "math-block",
-        HTML(paste0("$$",
-                    cap_terms(res$x, "x_{%d} = %.4f"),
-                    "$$")))
+        HTML(paste0("$$", cap_terms(res$x, "x_{%d} = %.4f"), "$$")))
     )
 
     step3 <- tagList(
@@ -442,23 +837,36 @@ server <- function(input, output, session) {
     )
   })
 
+  # ── table ─────────────────────────────────────────────────────────────────────
   output$simpson_table <- renderReactable({
-    res <- results()
-    df  <- data.frame(
+    res  <- results()
+    dark <- is_dark() 
+    
+    df <- data.frame(
       i        = res$i,
       x_i      = res$x,
       f_xi     = res$fx,
       coef     = res$coef,
       weighted = res$weighted
     )
+    
     reactable(df,
       defaultPageSize = 12, compact = TRUE,
       striped = TRUE, highlight = TRUE,
       theme = reactableTheme(
-        headerStyle = list(background   = "#F1F5F9",
-                           fontWeight   = 600,
-                           borderBottom = "2px solid #E2E8F0"),
-        cellStyle   = list(fontFamily   = "Inter")
+        headerStyle = list(
+          background   = if (dark) "#1e293b" else "#F1F5F9",
+          fontWeight   = 600,
+          borderBottom = if (dark) "2px solid #334155" else "2px solid #E2E8F0",
+          color        = if (dark) "#94a3b8" else "inherit"
+        ),
+        cellStyle = list(fontFamily = "Inter"),
+        style = list(
+          background = if (dark) "#0f172a" else "white",
+          color      = if (dark) "#e2e8f0" else "inherit"
+        ),
+        stripedColor    = if (dark) "#1e293b" else "#f8fafc",
+        highlightColor  = if (dark) "#334155" else "#f1f5f9"
       ),
       columns = list(
         i        = colDef(name = "i", align = "center", width = 70),
@@ -474,8 +882,7 @@ server <- function(input, output, session) {
             div(style = sprintf(
                   "background:%s;color:white;border-radius:9999px;
                    padding:2px 12px;display:inline-block;font-weight:600;",
-                  color),
-                value)
+                  color), value)
           }
         ),
         weighted = colDef(name = "c_i * f(x_i)", format = colFormat(digits = 6))
